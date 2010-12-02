@@ -1,6 +1,6 @@
 body {
-	font-family: Helvetica, sans-serif;
-	font-size: 13px; 
+	font-family: Verdana, Arial, sans-serif;
+	font-size: 12px; 
 	background: white;
   margin: 0;
 }
@@ -72,8 +72,7 @@ a:hover {
 
 #header {
   margin: 0;
-  padding: .8em 1em;
-  background-color: #88C2E5;
+  padding: .5em 1em .5em 1em;
 }
 
 #header .company_logo {

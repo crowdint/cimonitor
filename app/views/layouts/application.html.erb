@@ -18,8 +18,13 @@
 <body>
 
   <div id="header">
-    <%= link_to(image_tag('pivotallabs-logo.png', :class => 'company_logo'), '/') %>
-    <%= link_to(image_tag(logo), '/') %>
+      <div id="logo">
+        <%= link_to(image_tag('crowdint-logo.png', :class => 'company_logo'), '/') %>
+        <%= link_to(image_tag(logo), '/') %>
+      </div>
+    </div>
+    <div style="clear:both"></div>
+
     <div id="top_right">
       <% if current_user.present? %>
         Hello, <%= current_user.login %>
