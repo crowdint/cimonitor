@@ -119,7 +119,7 @@ left.
 
 ## Display
 
-Just open a browser on `/`. The page will refresh every 30 seconds. When it refreshes, it shows whatever status was last
+Just open a browser on `/`. The page will refresh every 60 seconds. When it refreshes, it shows whatever status was last
 fetched by the cron job. That is, a refresh doesn't cause the individual Builds to be polled.
 
 CiMonitor shows a big green check or a big red X to indicate a build's status. In addition, it shows the history of a
@@ -139,6 +139,13 @@ CiMonitor can inform you of builds that have been red for more than 24 hours. Se
 You can enter tags for a project (separated by commas) on the project edit page.  You can then have CiMonitor display
 only projects that match a set of tags by going to /?tags=tag1,tag2
 
+## Skins
+
+You can skin the CiMonitor dashboard by adding a layout to app/views/layouts/skins, and associated static assets in
+public/skins. View your skinned dashboard at http://myhost.com:3333/?skin=my_skin_name.
+
+We have included an example skin - 'dark', which is great for dashboards with fewer projects.
+
 ## CI
 
 CI for CiMonitor is [here](http://ci.pivotallabs.com:3333/builds/CiMonitor), and it's aggregated at [ci.pivotallabs.com](http://ci.pivotallabs.com)
@@ -153,3 +160,4 @@ To run tests, run:
     rake spec
 
 Copyright (c) 2010 Pivotal Labs. This software is licensed under the MIT License.
+

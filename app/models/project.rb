@@ -2,6 +2,9 @@ class Project < ActiveRecord::Base
   RECENT_STATUS_COUNT = 10
   DEFAULT_POLLING_INTERVAL = 120
   has_many :statuses, :class_name => "ProjectStatus", :order => "id DESC", :limit => RECENT_STATUS_COUNT
+  belongs_to :aggregate_project
+
+  scope :standalone, where(:enabled => true, :aggregate_project_id => nil).order(:name)
 
   acts_as_taggable
 
@@ -52,7 +55,7 @@ class Project < ActiveRecord::Base
   end
 
   def recent_online_statuses(count = RECENT_STATUS_COUNT)
-    statuses.reject{|s| !s.online}.reverse.last(count)
+    ProjectStatus.online(self, count)
   end
 
   def set_next_poll!
@@ -72,15 +75,17 @@ class Project < ActiveRecord::Base
     BuildingStatus.new(false)
   end
 
-  private
+  def url
+    status.url
+  end
 
   def last_green
-    @last_green ||= statuses.detect(&:success?)
+    @last_green ||= statuses.where(:success => true).first
   end
 
   def breaking_build
     @breaking_build ||= if last_green.nil?
-      statuses.last
+      statuses.where(:online => true, :success => false).last
     else
       statuses.find(:last, :conditions => ["online = ? AND success = ? AND id > ?", true, false, last_green.id])
     end

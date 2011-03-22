@@ -29,6 +29,13 @@ describe HudsonProject do
       @project.feed_url = 'http://foo.bar.com:3434/job/example_project/wrong'
       @project.should have(1).errors_on(:feed_url)
     end
+
+    it "should allow both http and https" do
+      @project.feed_url = "http://foo.bar.com:3434/job/example_project/rssAll"
+      @project.should have(0).errors_on(:feed_url)
+      @project.feed_url = 'https://foo.bar.com:3434/job/example_project/rssAll'
+      @project.should have(0).errors_on(:feed_url)
+    end
   end
 
   describe "#build_status_url" do
@@ -67,6 +74,14 @@ describe HudsonProject do
     describe "with reported 'stable'" do
       before(:each) do
         @feed_file = "stable.atom"
+      end
+
+      it_should_behave_like "successful build"
+    end
+
+    describe "with reported 'back to normal'" do
+      before(:each) do
+        @feed_file = "back_to_normal.atom"
       end
 
       it_should_behave_like "successful build"

@@ -29,6 +29,21 @@ describe Project do
     end
   end
 
+  describe 'scopes' do
+    it "should return non aggregated projects" do
+      Project.standalone.should include projects(:pivots)
+      Project.standalone.should include projects(:socialitis)
+      Project.standalone.should_not include projects(:internal_project1)
+      Project.standalone.should_not include projects(:internal_project2)
+
+    end
+
+    it "should sort by project name" do
+      sorted_projects = Project.find(:all, :conditions => {:enabled => true, :aggregate_project_id => nil}).sort_by(&:name)
+      Project.standalone.should == sorted_projects
+    end
+
+  end
   describe "statuses" do
     before(:each) do
       @project = projects(:socialitis)
@@ -42,6 +57,16 @@ describe Project do
         status.id.should < last_id unless last_id.nil?
         last_id = status.id
       end
+    end
+  end
+
+  describe "#last green" do
+    it "should return the successful project" do
+      @project = projects(:socialitis)
+      @project.statuses = []
+      @happy_status = @project.statuses.create!(:online => true, :success => true)
+      @sad_status = @project.statuses.create!(:online => true, :success => false)
+      @project.last_green.should == @happy_status
     end
   end
 
@@ -60,6 +85,18 @@ describe Project do
         @project.status.should_not be_nil
         @project.status.should_not be_online
       end
+    end
+  end
+
+  describe "#aggregate_project" do
+    it "should have an aggregate project, if set" do
+      @project = projects(:socialitis)
+      @project.aggregate_project.should be_nil
+      @ap = AggregateProject.create(:name => "ap")
+      @project.aggregate_project = @ap
+      @project.save.should be_true
+      @project = Project.find_by_name('Socialitis')
+      @project.aggregate_project.should == @ap
     end
   end
 
@@ -89,18 +126,6 @@ describe Project do
       @project.statuses.should be_empty
       @project.should_not be_red
       @project.should_not be_green
-    end
-  end
-
-  describe "#recent_online_statuses" do
-    it "should should return 'count' recent online statuses" do
-      project = projects(:socialitis)
-      project.statuses.delete_all
-      online_status = project.statuses.create!(:success => false, :online => true)
-      offline_status = project.statuses.create!(:success => false, :online => false)
-
-      project.recent_online_statuses.should include(online_status)
-      project.recent_online_statuses.should_not include(offline_status)
     end
   end
 
@@ -152,6 +177,19 @@ describe Project do
       # Argh.  What is the assert_approximately_equal matcher for rspec?
       # And why is the documentation for it so hard to find?
       project.red_since.to_s(:db).should == broken_at.to_s(:db)
+    end
+  end
+
+  describe "#breaking build" do
+    context "without any green builds" do
+      it "should return the first red online build" do
+        project = projects(:socialitis)
+        project.statuses.destroy_all
+        first_red = project.statuses.create!(:online => true, :success => false)
+        project.statuses.create!(:online => true, :success => false)
+        project.statuses.create!(:online => false, :success => false)
+        project.breaking_build.should == first_red
+      end
     end
   end
 

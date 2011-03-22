@@ -1,8 +1,6 @@
-require "headless"
-
 task :cruise do
 
-  Rake::Task["spec"].invoke
+  require "headless"
 
   sh 'rake setup'
   sh 'rake db:migrate'

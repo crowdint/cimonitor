@@ -1,11 +1,11 @@
 require 'spec_helper'
 
-describe CiMonitorController do
+describe DashboardsController do
   render_views
 
   describe "routes" do
-    it "should map /cimonitor to #show" do
-      {:get => "/cimonitor"}.should route_to(:controller => 'ci_monitor', :action => 'show')
+    it "should map /dashboard to #show" do
+      {:get => "/dashboard"}.should route_to(:controller => 'dashboards', :action => 'show')
     end
   end
 
@@ -63,20 +63,53 @@ describe CiMonitorController do
           end
         end
       end
+
+      describe "skins" do
+        it "should display the skin supplied by the 'skin' query param" do
+          get :show, :skin => 'dark'
+          response.should render_template('layouts/skins/dark')
+        end
+
+        it "should display the default layout if skin doesn't exist or isn't specified" do
+          get :show, :skin => 'fake'
+          response.should_not render_template('layouts/skins/fake')
+          response.should render_template('layouts/application')
+
+          get :show
+          response.should render_template('layouts/application')
+        end
+      end
     end
 
     it "should filter by tag" do
       nyc_projects = Project.find_tagged_with('NYC')
       nyc_projects.should_not be_empty
 
+      aggregate_nyc_projects = AggregateProject.find_tagged_with('NYC')
+      aggregate_nyc_projects.reject! { |project| !project.enabled? }
+      aggregate_nyc_projects.should_not be_empty
+
       get :show, :size => 'tiny', :tags => 'NYC'
-      assigns(:projects).should =~ nyc_projects
+      assigns(:projects).should =~ [nyc_projects, aggregate_nyc_projects].flatten
     end
 
-    it "should sort the projects by name" do
-      sorted_projects = Project.find(:all, :conditions => {:enabled => true}).sort_by(&:name)
+    it "should sort across projects and aggregate projects" do
       get :show
-      assigns(:projects).should == sorted_projects
+      assigns(:projects).map(&:name).should == ["Aggregation", "Green Currently Building", "Lumos", "Many Builds", "Never built", "Offline", "Pivots", "Red Currently Building", "Socialitis"]
+    end
+
+    it "should sort across projects and aggregate projects specifying tags" do
+      get :show, :tags => 'NYC'
+      assigns(:projects).map(&:name).should == ["Aggregation", "Pivots", "Socialitis"]
+    end
+
+    it "should not show child projects that are in an aggregate project when a tag matches both" do
+      internal_nyc_project1 = projects(:internal_project1)
+      internal_nyc_project1.tag_list = 'NYC'
+      internal_nyc_project1.save!
+
+      get :show, :size => 'tiny', :tags => 'NYC'
+      assigns(:projects).map(&:name).should_not include(internal_nyc_project1.name)
     end
 
     it "should not store the most recent request location" do
@@ -109,7 +142,7 @@ describe CiMonitorController do
 
     it "should display a checkmark for green projects not building" do
       get :show
-      not_building_projects = Project.find_all_by_enabled(true).reject(&:building?)
+      not_building_projects = Project.standalone.reject(&:building?)
       not_building_projects.should_not be_empty
       not_building_projects.each do |project|
         response.should have_tag("div.box[project_id='#{project.id}']") do |box|
@@ -120,7 +153,7 @@ describe CiMonitorController do
 
     it "should display an exclamation for red projects not building" do
       get :show
-      not_building_projects = Project.find_all_by_enabled(true).reject(&:building?)
+      not_building_projects = Project.standalone.reject(&:building?)
       not_building_projects.should_not be_empty
       not_building_projects.each do |project|
         response.should have_tag("div.box[project_id='#{project.id}']") do |box|
@@ -129,9 +162,17 @@ describe CiMonitorController do
       end
     end
 
-    it "should not include an auto dicovery rss link until it has stabilized" do
+    it "should not include an auto discovery rss link until it has stabilized" do
       get :show
       response.should_not have_tag("head link[rel=alternate][type=application/rss+xml]")
+    end
+
+    it "should not incorrectly escape html" do
+      get :show
+      response.should_not have_tag("span.sparkline", '&lt;span')
+      Nokogiri::HTML(response.body).css('.sparkline').each do |node|
+        node.to_s.should_not include '&lt;'
+      end
     end
 
     context "when the format is rss" do
@@ -154,7 +195,7 @@ describe CiMonitorController do
 
       describe "items" do
         before do
-          @all_projects = Project.find(:all, :conditions => {:enabled => true})
+          @all_projects = Project.standalone
           @all_projects.should_not be_empty
         end
 
@@ -215,6 +256,21 @@ describe CiMonitorController do
           end
         end
       end
+    end
+
+    describe 'aggregate projects' do
+      it "should show aggregate projects that are not empty" do
+        get :show
+        assigns(:projects).should include aggregate_projects(:internal_projects_aggregate)
+        assigns(:projects).should_not include aggregate_projects(:empty_aggregate)
+      end
+
+      it "should not show projects that are part of an aggregated project" do
+        get :show
+        assigns(:projects).should_not include projects(:internal_project1)
+        assigns(:projects).should_not include projects(:internal_project2)
+      end
+
     end
   end
 end
