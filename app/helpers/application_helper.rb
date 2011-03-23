@@ -4,7 +4,7 @@ module ApplicationHelper
   end
 
   def title
-    "Pivotal Labs CI"
+    "Crowd Interactive CI"
   end
 
   def historical_status_list(project)
