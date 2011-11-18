@@ -29,7 +29,7 @@ module Authentication
       # older versions of restful-authentication.
       def password_digest(password, salt)
         digest = REST_AUTH_SITE_KEY
-        REST_AUTH_DIGEST_STRETCHES.times do
+        (REST_AUTH_DIGEST_STRETCHES || 3).times do
           digest = secure_digest(digest, salt, password, REST_AUTH_SITE_KEY)
         end
         digest
